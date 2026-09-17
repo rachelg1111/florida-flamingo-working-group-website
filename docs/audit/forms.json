@@ -1,0 +1,92 @@
+{
+  "report-a-flamingo-sighting": [
+    {
+      "id": "g63-name",
+      "name": "g63-name",
+      "type": "text",
+      "required": "true"
+    },
+    {
+      "id": "g63-email",
+      "name": "g63-email",
+      "type": "email"
+    },
+    {
+      "id": "g63-date",
+      "name": "g63-date",
+      "type": "text",
+      "required": "true"
+    },
+    {
+      "id": "g63-time",
+      "name": "g63-time",
+      "type": "time"
+    },
+    {
+      "id": "g63-location",
+      "name": "g63-location",
+      "type": "text"
+    },
+    {
+      "id": "g63-coordinatesormaplink",
+      "name": "g63-coordinatesormaplink",
+      "type": "text"
+    },
+    {
+      "id": "g63-numberofflamingos",
+      "name": "g63-numberofflamingos",
+      "type": "number"
+    },
+    {
+      "id": "g63-wherebandsortagsvisibleyesno",
+      "name": "g63-wherebandsortagsvisibleyesno",
+      "type": "text"
+    },
+    {
+      "id": "g63-bandcolors044numbersortagdetails",
+      "name": "g63-bandcolors044numbersortagdetails",
+      "type": "text"
+    },
+    {
+      "id": "g63-whatwerebirdsdoing",
+      "name": "g63-whatwerebirdsdoing",
+      "type": "text"
+    },
+    {
+      "id": "g63-additionalobservations",
+      "name": "g63-additionalobservations",
+      "type": "text"
+    },
+    {
+      "id": "g63-igivethefloridaflamingoworkinggrouppermissiontousethesubmittedinformationandphotographsforresearch044conservation044education044andoutreach-personalcontactinformationwillnotbepubliclyshared",
+      "name": "g63-igivethefloridaflamingoworkinggrouppermissiontousethesubmittedinformationandphotographsforresearch044conservation044education044andoutreach-personalcontactinformationwillnotbepubliclyshared",
+      "type": "checkbox"
+    },
+    {
+      "name": "ak_hp_textarea"
+    }
+  ],
+  "contact-us": [
+    {
+      "id": "name",
+      "name": "name",
+      "type": "text",
+      "required": "true",
+      "placeholder": "Tony "
+    },
+    {
+      "id": "g107-email",
+      "name": "g107-email",
+      "type": "email",
+      "required": "true",
+      "placeholder": "tpernas@bellsouth.net"
+    },
+    {
+      "id": "contact-form-comment-g107-message",
+      "name": "g107-message"
+    },
+    {
+      "name": "ak_hp_textarea"
+    }
+  ]
+}

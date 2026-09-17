@@ -1,0 +1,5 @@
+import Image from 'next/image';
+import Link from 'next/link';
+export function Photo({src,alt,className='',priority=false}:{src:string;alt:string;className?:string;priority?:boolean}){return <div className={`photo ${className}`}><Image src={src} alt={alt} fill sizes="(max-width: 760px) 100vw, 60vw" priority={priority}/></div>}
+export function PageIntro({eyebrow,title,description}:{eyebrow:string;title:string;description:string}){return <section className="page-intro"><div className="container"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="lead">{description}</p></div></section>}
+export function TakePart(){return <section className="take-part"><div className="container take-part-inner"><div><p className="eyebrow">EVERY OBSERVATION MATTERS</p><h2>Seen a flamingo in the wild?</h2><p>Your observations can help researchers understand where flamingos go and what they need.</p></div><Link className="button light" href="/report-a-flamingo-sighting/">Report a sighting <span aria-hidden="true">↗</span></Link></div></section>}

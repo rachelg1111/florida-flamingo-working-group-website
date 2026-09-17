@@ -1,0 +1,45 @@
+{
+  "checked": "2026-09-17",
+  "sources": [
+    {
+      "url": "https://www.flsenate.gov/Session/Bill/2026/150",
+      "title": "Senate Bill 150 (2026) - The Florida Senate",
+      "status": "retrieved",
+      "finalUrl": "https://www.flsenate.gov/Session/Bill/2026/150"
+    },
+    {
+      "url": "https://www.flsenate.gov/Session/Bill/2026/11",
+      "title": "House Bill 11 (2026) - The Florida Senate",
+      "status": "retrieved",
+      "finalUrl": "https://www.flsenate.gov/Session/Bill/2026/11"
+    },
+    {
+      "url": "https://myfwc.com/wildlifehabitats/profiles/birds/waterbirds/american-flamingo/",
+      "title": "American flamingo",
+      "status": "retrieved",
+      "finalUrl": "https://myfwc.com/wildlifehabitats/profiles/birds/waterbirds/american-flamingo/"
+    },
+    {
+      "url": "https://doi.org/10.1371/journal.pone.0244117",
+      "title": "Assessment of the American Flamingo distribution, trends, and important breeding areas",
+      "status": "retrieved",
+      "finalUrl": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0244117"
+    }
+  ],
+  "errors": [
+    {
+      "url": "https://doi.org/10.1650/CONDOR-17-187.1",
+      "error": "bot_blocked"
+    },
+    {
+      "url": "https://doi.org/10.1093/ornithapp/duaf071",
+      "error": "bot_blocked"
+    }
+  ],
+  "additionalVerifiedSources": [
+    "https://digitalcommons.usf.edu/ffn/vol49/iss2/6/",
+    "https://www.ucf.edu/news/ucf-study-confirms-flamingos-are-native-to-florida-and-genetically-fit-for-restoration/",
+    "https://www.epa.gov/wetlands/why-are-wetlands-important"
+  ],
+  "interpretation": "See docs/AUDIT.md; no claim of full-text publisher access for bot-blocked papers."
+}
