@@ -1,0 +1,27 @@
+[
+  {
+    "url": "https://www.paypal.com/donate/?hosted_button_id=4PF69PGSCR5FN",
+    "status": 200,
+    "finalUrl": "https://www.paypal.com/donate/?hosted_button_id=4PF69PGSCR5FN"
+  },
+  {
+    "url": "https://www.flhouse.gov/Sections/Bills/billsdetail.aspx?BillId=82535",
+    "status": 200,
+    "finalUrl": "https://www.flhouse.gov/Sections/Bills/billsdetail.aspx?BillId=82535"
+  },
+  {
+    "url": "https://flamingospecialistgroup.org/",
+    "status": 403,
+    "note": "HTTP access failed; not proof link is broken."
+  },
+  {
+    "url": "https://datazone.birdlife.org/species/factsheet/american-flamingo-phoenicopterus-ruber",
+    "status": 200,
+    "finalUrl": "https://datazone.birdlife.org/species/factsheet/american-flamingo-phoenicopterus-ruber"
+  },
+  {
+    "url": "https://www.flsenate.gov/Senators/Find",
+    "status": 200,
+    "finalUrl": "https://www.flsenate.gov/Senators/Find"
+  }
+]
