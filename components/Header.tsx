@@ -16,6 +16,15 @@ export default function Header() {
           <span className="brand-symbol" aria-hidden="true">F<span>F</span></span>
           <span>FLORIDA FLAMINGO<small>WORKING GROUP</small></span>
         </Link>
+        <a
+          className="button coral mobile-donate"
+          href={site.donation}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Donate through PayPal (opens in a new tab)"
+        >
+          Donate
+        </a>
         <button
           className="menu-toggle"
           aria-expanded={open}
