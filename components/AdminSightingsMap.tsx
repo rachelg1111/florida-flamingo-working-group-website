@@ -1,5 +1,7 @@
 'use client';
 
+// FFWG private research map
+
 import {useEffect,useMemo,useRef,useState} from 'react';
 
 declare global {
