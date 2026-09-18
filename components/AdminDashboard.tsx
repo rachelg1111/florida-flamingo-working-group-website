@@ -220,7 +220,7 @@ export default function AdminDashboard(){
       </div>
     </>}
 
-    {tab==='map'&&<AdminSightingsMap sightings={rows} onOpenRecord={s=>{setSelected({...s} as Sighting);setTab('sightings');}}/>}
+    {tab==='map'&&<AdminSightingsMap sightings={rows} onOpenRecord={id=>{const record=rows.find(r=>r.id===id);if(record)setSelected({...record});setTab('sightings');}}/>}
 
     {tab==='import'&&<div className="admin-import">
       <div className="admin-card"><p className="eyebrow">BULK IMPORT</p><h2>Import historical sightings</h2><p>Upload a CSV or Excel file. Nothing is written until validation is complete and you confirm the import.</p><label className="upload-field">Choose CSV or Excel<input type="file" accept=".csv,.xlsx,.xls" onChange={e=>e.target.files?.[0]&&loadFile(e.target.files[0])}/></label>{fileName&&<p><strong>{fileName}</strong> · {sheetRows.length} data rows loaded</p>}</div>
