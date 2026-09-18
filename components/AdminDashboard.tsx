@@ -125,8 +125,8 @@ export default function AdminDashboard(){
     e.preventDefault();setLoginError('');setBusy(true);
     try{
       const redirect=window.location.origin+'/admin';
-      const res=await fetch(SUPABASE_URL+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),create_user:true})});
-      if(!res.ok){const d=await res.json();throw new Error(d.msg||d.error_description||'Unable to send sign-in link.');}
+      const res=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),redirectTo:redirect})});
+      if(!res.ok)throw new Error('Unable to send sign-in link.');
       setLoginSent(true);
     }catch(e){setLoginError(e instanceof Error?e.message:'Unable to send sign-in link.');}
     finally{setBusy(false);}
