@@ -125,8 +125,8 @@ export default function AdminDashboard(){
     e.preventDefault();setLoginError('');setBusy(true);
     try{
       const redirect=window.location.origin+'/admin';
-      const res=await fetch(SUPABASE_URL+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),create_user:true})});
-      if(!res.ok){const d=await res.json();throw new Error(d.msg||d.error_description||'Unable to send sign-in link.');}
+      const res=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),redirectTo:redirect})});
+      if(!res.ok)throw new Error('Unable to send sign-in link.');
       setLoginSent(true);
     }catch(e){setLoginError(e instanceof Error?e.message:'Unable to send sign-in link.');}
     finally{setBusy(false);}
@@ -150,6 +150,18 @@ export default function AdminDashboard(){
   }
   async function openPhoto(p:Photo){
     try{const d=await api('photoUrl',{path:p.storage_path});window.open(d.url,'_blank','noopener,noreferrer');}catch(e){setNotice(e instanceof Error?e.message:'Unable to open photo.');}
+  }
+  async function deleteSelected(){
+    if(!selected||admin?.role==='reviewer')return;
+    const label=selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'this sighting';
+    if(!confirm('Permanently delete '+label+' and all linked private photos? This cannot be undone.'))return;
+    setBusy(true);setNotice('');
+    try{
+      const d=await api('deleteSighting',{id:selected.id});
+      setNotice('Sighting deleted'+(d.deletedPhotos?(' with '+d.deletedPhotos+' photo'+(d.deletedPhotos===1?'':'s')):'')+'.');
+      setSelected(null);await loadSightings();
+    }catch(e){setNotice(e instanceof Error?e.message:'Delete failed.');}
+    finally{setBusy(false);}
   }
   async function exportCsv(){
     setBusy(true);try{const d=await api('exportSightings');const blob=new Blob([d.csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=d.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){setNotice(e instanceof Error?e.message:'Export failed.');}finally{setBusy(false);}
@@ -203,7 +215,7 @@ export default function AdminDashboard(){
       <div className="admin-toolbar"><input placeholder="Search name, location, notes" value={search} onChange={e=>setSearch(e.target.value)}/><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select><select value={source} onChange={e=>setSource(e.target.value)}><option value="">All sources</option><option value="website">Website</option><option value="spreadsheet_import">Spreadsheet</option><option value="manual_admin">Manual</option></select><button className="button small navy" onClick={()=>loadSightings()} disabled={busy}>Apply</button><button className="button small" onClick={exportCsv} disabled={busy}>Export CSV</button></div>
       <div className="admin-grid">
         <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Location</th><th>Birds</th><th>Source</th><th>Status</th><th>Photos</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} className={selected?.id===r.id?'selected':''} onClick={()=>setSelected({...r})}><td>{fmtDate(r.sighting_date)}</td><td>{r.location_description}</td><td>{r.flamingo_count}</td><td>{sourceLabel(r.source)}</td><td><span className={'status-pill '+r.status}>{statusLabel(r.status)}</span></td><td>{r.sighting_photos?.length||0}</td></tr>)}</tbody></table></div>
-        <aside className="admin-detail">{selected?<><div className="admin-detail-head"><div><p className="eyebrow">SIGHTING</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2></div></div><dl><dt>Date / time</dt><dd>{fmtDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}{selected.latitude!==null&&selected.longitude!==null?<><br/><small>{selected.latitude}, {selected.longitude}</small></>:null}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Observer</dt><dd>{selected.observer_name}{selected.observer_email?<><br/><small>{selected.observer_email}</small></>:null}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Notes</dt><dd>{selected.notes||'—'}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}{selected.legacy_id?' · '+selected.legacy_id:''}</dd></dl>{selected.sighting_photos?.length>0&&<div className="admin-photos"><h3>Photos</h3>{selected.sighting_photos.map(p=><button key={p.id} onClick={()=>openPhoto(p)}>{p.original_filename} <span>View ↗</span></button>)}</div>}<label>Status<select value={selected.status} onChange={e=>setSelected({...selected,status:e.target.value})}>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={5} value={selected.internal_notes||''} onChange={e=>setSelected({...selected,internal_notes:e.target.value})}/></label><button className="button navy" onClick={saveSelected} disabled={busy}>Save review</button></>:<div className="admin-empty">Select a sighting to review its details.</div>}</aside>
+        <aside className="admin-detail">{selected?<><div className="admin-detail-head"><div><p className="eyebrow">SIGHTING</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2></div></div><dl><dt>Date / time</dt><dd>{fmtDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}{selected.latitude!==null&&selected.longitude!==null?<><br/><small>{selected.latitude}, {selected.longitude}</small></>:null}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Observer</dt><dd>{selected.observer_name}{selected.observer_email?<><br/><small>{selected.observer_email}</small></>:null}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Notes</dt><dd>{selected.notes||'—'}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}{selected.legacy_id?' · '+selected.legacy_id:''}</dd></dl>{selected.sighting_photos?.length>0&&<div className="admin-photos"><h3>Photos</h3>{selected.sighting_photos.map(p=><button key={p.id} onClick={()=>openPhoto(p)}>{p.original_filename} <span>View ↗</span></button>)}</div>}<label>Status<select value={selected.status} onChange={e=>setSelected({...selected,status:e.target.value})}>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={5} value={selected.internal_notes||''} onChange={e=>setSelected({...selected,internal_notes:e.target.value})}/></label><div className="admin-record-actions"><button className="button navy" onClick={saveSelected} disabled={busy}>Save review</button>{admin.role!=='reviewer'&&<button className="admin-danger-button" onClick={deleteSelected} disabled={busy}>Delete sighting</button>}</div></>:<div className="admin-empty">Select a sighting to review its details.</div>}</aside>
       </div>
     </>}
 
