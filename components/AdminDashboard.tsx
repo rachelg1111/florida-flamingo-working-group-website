@@ -26,6 +26,7 @@ type ImportBatch={
   status:string;rows_total:number;rows_valid:number;rows_imported:number;rows_rejected:number;
 };
 type AdminMember={email:string;role:'owner'|'admin'|'reviewer';active:boolean;added_at:string};
+type ContactInquiry={id:string;reference_no:number;submitted_at:string;name:string;email:string;topic:string;message:string;status:'new'|'reviewing'|'responded'|'closed'|'spam';internal_notes:string|null};
 
 const fields=[
   ['sighting_date','Sighting date *'],['location_description','Location *'],['flamingo_count','Flamingo count *'],
@@ -81,7 +82,7 @@ export default function AdminDashboard(){
   const [loginSent,setLoginSent]=useState(false);
   const [loginError,setLoginError]=useState('');
   const [loading,setLoading]=useState(true);
-  const [tab,setTab]=useState<'sightings'|'map'|'import'|'history'|'users'>('sightings');
+  const [tab,setTab]=useState<'sightings'|'map'|'import'|'history'|'inquiries'|'users'>('sightings');
   const [rows,setRows]=useState<Sighting[]>([]);
   const [selected,setSelected]=useState<Sighting|null>(null);
   const [search,setSearch]=useState('');
@@ -89,6 +90,7 @@ export default function AdminDashboard(){
   const [source,setSource]=useState('');
   const [imports,setImports]=useState<ImportBatch[]>([]);
   const [users,setUsers]=useState<AdminMember[]>([]);
+  const [inquiries,setInquiries]=useState<ContactInquiry[]>([]);
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState(false);
 
@@ -120,7 +122,7 @@ export default function AdminDashboard(){
   }
   async function checkSession(){
     setLoading(true);
-    try{const data=await api('me');setAdmin(data);await Promise.all([loadSightings(data),loadImports(data),data.role==='owner'?loadAdmins(data):Promise.resolve()]);}
+    try{const data=await api('me');setAdmin(data);await Promise.all([loadSightings(data),loadImports(data),data.role==='owner'?loadAdmins(data):Promise.resolve(),data.role!=='reviewer'?loadInquiries(data):Promise.resolve()]);}
     catch{localStorage.removeItem(ACCESS_KEY);localStorage.removeItem(REFRESH_KEY);setAdmin(null);}
     finally{setLoading(false);}
   }
@@ -148,6 +150,16 @@ export default function AdminDashboard(){
   async function loadAdmins(_a=admin){
     if(_a?.role!=='owner')return;
     try{const d=await api('listAdmins');setUsers(d.rows);}catch(e){setNotice(e instanceof Error?e.message:'Could not load user access.');}
+  }
+  async function loadInquiries(_a=admin){
+    if(!_a||_a.role==='reviewer')return;
+    try{const d=await api('listContactInquiries');setInquiries(d.rows);}catch(e){setNotice(e instanceof Error?e.message:'Could not load inquiries.');}
+  }
+  async function saveInquiry(inquiry:ContactInquiry){
+    setBusy(true);setNotice('');
+    try{await api('updateContactInquiry',{id:inquiry.id,status:inquiry.status,internal_notes:inquiry.internal_notes||''});setNotice('Inquiry updated.');await loadInquiries();}
+    catch(e){setNotice(e instanceof Error?e.message:'Inquiry update failed.');}
+    finally{setBusy(false);}
   }
   async function saveAdminAccess(member:AdminMember){
     setBusy(true);setNotice('');
@@ -220,7 +232,7 @@ export default function AdminDashboard(){
 
   return <section className="container section admin-shell">
     <div className="admin-top"><div><p className="eyebrow">FFWG SIGHTINGS SYSTEM</p><h1>Admin dashboard</h1><p className="admin-muted">Signed in as {admin.email} · {admin.role}</p></div><button className="button small navy" onClick={logout}>Sign out</button></div>
-    <div className="admin-tabs"><button className={tab==='sightings'?'active':''} onClick={()=>setTab('sightings')}>Sightings</button><button className={tab==='map'?'active':''} onClick={()=>setTab('map')}>Interactive map</button><button className={tab==='import'?'active':''} onClick={()=>setTab('import')}>Import sightings</button><button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>Import history</button>{admin.role==='owner'&&<button className={tab==='users'?'active':''} onClick={()=>setTab('users')}>User access</button>}</div>
+    <div className="admin-tabs"><button className={tab==='sightings'?'active':''} onClick={()=>setTab('sightings')}>Sightings</button><button className={tab==='map'?'active':''} onClick={()=>setTab('map')}>Interactive map</button><button className={tab==='import'?'active':''} onClick={()=>setTab('import')}>Import sightings</button><button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>Import history</button>{admin.role!=='reviewer'&&<button className={tab==='inquiries'?'active':''} onClick={()=>setTab('inquiries')}>Inquiries</button>}{admin.role==='owner'&&<button className={tab==='users'?'active':''} onClick={()=>setTab('users')}>User access</button>}</div>
     {notice&&<div className="admin-notice">{notice}</div>}
 
     {tab==='sightings'&&<>
@@ -239,6 +251,8 @@ export default function AdminDashboard(){
       {headers.length>0&&<div className="admin-card"><h3>Map spreadsheet columns</h3><div className="mapping-grid">{fields.map(([key,label])=><label key={key}>{label}<select value={mapping[key]??''} onChange={e=>setMapping({...mapping,[key]:e.target.value===''?-1:Number(e.target.value)})}><option value="">Not mapped</option>{headers.map((h,i)=><option key={i} value={i}>{h||'Column '+(i+1)}</option>)}</select></label>)}</div><label>Source label (optional)<input value={sourceLabelText} onChange={e=>setSourceLabelText(e.target.value)} placeholder="Example: 2024 statewide survey"/></label><button className="button navy" onClick={validateImport} disabled={busy}>Validate import</button></div>}
       {validation&&<div className="admin-card"><h3>Validation results</h3><div className="admin-stats"><div><strong>{validation.summary.total}</strong><span>Total rows</span></div><div><strong>{validation.summary.valid}</strong><span>Ready</span></div><div><strong>{validation.summary.rejected}</strong><span>Skipped</span></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Row</th><th>Date</th><th>Location</th><th>Birds</th><th>Result</th></tr></thead><tbody>{validation.preview.map((r:any)=><tr key={r.row}><td>{r.row}</td><td>{r.data.sighting_date||'—'}</td><td>{r.data.location_description||'—'}</td><td>{r.data.flamingo_count??'—'}</td><td>{r.valid?'Ready':r.errors.join('; ')}</td></tr>)}</tbody></table></div>{validation.summary.valid>0&&admin.role!=='reviewer'&&<button className="button coral" onClick={commitImport} disabled={busy}>Import {validation.summary.valid} valid rows</button>}</div>}
     </div>}
+
+    {tab==='inquiries'&&admin.role!=='reviewer'&&<div className="admin-import"><div className="admin-card"><p className="eyebrow">CONTACT FORM</p><h2>Inquiries</h2><p>Messages submitted through the public Contact Us form appear here for authorized administrators.</p></div>{inquiries.length===0?<div className="admin-card"><p>No inquiries yet.</p></div>:inquiries.map(q=><div className="admin-card" key={q.id}><p className="eyebrow">{'FFWG-C-'+new Date(q.submitted_at).getFullYear()+'-'+String(q.reference_no).padStart(5,'0')} · {new Date(q.submitted_at).toLocaleString()}</p><h2>{q.topic}</h2><p><strong>From:</strong> {q.name} · <a href={'mailto:'+q.email}>{q.email}</a></p><p style={{whiteSpace:'pre-wrap'}}>{q.message}</p><div className="mapping-grid"><label>Status<select value={q.status} disabled={busy} onChange={e=>setInquiries(inquiries.map(x=>x.id===q.id?{...x,status:e.target.value as ContactInquiry['status']}:x))}>{['new','reviewing','responded','closed','spam'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={3} value={q.internal_notes||''} disabled={busy} onChange={e=>setInquiries(inquiries.map(x=>x.id===q.id?{...x,internal_notes:e.target.value}:x))}/></label></div><a className="button small" href={'mailto:'+q.email+'?subject='+encodeURIComponent('Florida Flamingo Working Group: '+q.topic)}>Reply by email</a> <button className="button small navy" onClick={()=>saveInquiry(q)} disabled={busy}>Save inquiry</button></div>)}</div>}
 
     {tab==='users'&&admin.role==='owner'&&<div className="admin-card"><p className="eyebrow">DASHBOARD ACCESS</p><h2>User access</h2><p>Reviewers can review sightings, update status and internal notes, view photos, and export records. Admins can also delete sightings and import or roll back data. Only the owner can manage access.</p><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>{users.map(u=><tr key={u.email}><td>{u.email}</td><td><select aria-label={'Role for '+u.email} value={u.role} disabled={u.role==='owner'||busy} onChange={e=>setUsers(users.map(x=>x.email===u.email?{...x,role:e.target.value as AdminMember['role']}:x))}>{u.role==='owner'&&<option value="owner">Owner</option>}<option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></td><td><select aria-label={'Status for '+u.email} value={u.active?'active':'inactive'} disabled={u.role==='owner'||busy} onChange={e=>setUsers(users.map(x=>x.email===u.email?{...x,active:e.target.value==='active'}:x))}><option value="active">Active</option><option value="inactive">Inactive</option></select></td><td>{new Date(u.added_at).toLocaleDateString()}</td><td>{u.role!=='owner'&&<button className="admin-link-button" onClick={()=>saveAdminAccess(u)} disabled={busy}>Save</button>}</td></tr>)}</tbody></table></div></div>}
 
