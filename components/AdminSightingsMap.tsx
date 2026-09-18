@@ -26,7 +26,7 @@ type Sighting={
 
 type Props={
   sightings:Sighting[];
-  onOpenRecord:(s:Sighting)=>void;
+  onOpenRecord:(id:string)=>void;
 };
 
 const leafletCss='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -139,7 +139,7 @@ export default function AdminSightingsMap({sightings,onOpenRecord}:Props){
     <div className="admin-map-layout">
       <div ref={container} className="admin-map-canvas" aria-label="Private interactive map of flamingo sightings"/>
       <aside className="admin-map-card">
-        {selected?<><p className="eyebrow">MAP SELECTION</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2><dl><dt>Date</dt><dd>{formatDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}</dd><dt>Coordinates</dt><dd>{selected.latitude}, {selected.longitude}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Status</dt><dd>{statusLabel(selected.status)}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Photos</dt><dd>{selected.sighting_photos?.length||0}</dd></dl><button className="button navy" onClick={()=>onOpenRecord(selected)}>Open full record</button></>:<div className="admin-empty">Click a map marker to see the sighting summary.</div>}
+        {selected?<><p className="eyebrow">MAP SELECTION</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2><dl><dt>Date</dt><dd>{formatDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}</dd><dt>Coordinates</dt><dd>{selected.latitude}, {selected.longitude}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Status</dt><dd>{statusLabel(selected.status)}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Photos</dt><dd>{selected.sighting_photos?.length||0}</dd></dl><button className="button navy" onClick={()=>onOpenRecord(selected.id)}>Open full record</button></>:<div className="admin-empty">Click a map marker to see the sighting summary.</div>}
       </aside>
     </div>
     <p className="admin-map-privacy"><strong>Private research view.</strong> Exact coordinates are shown only to authorized dashboard members and are not published on the public website.</p>
