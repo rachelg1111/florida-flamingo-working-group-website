@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useMemo,useState} from 'react';
+import AdminSightingsMap from '@/components/AdminSightingsMap';
 
 declare global {
   interface Window { XLSX?: any }
@@ -79,7 +80,7 @@ export default function AdminDashboard(){
   const [loginSent,setLoginSent]=useState(false);
   const [loginError,setLoginError]=useState('');
   const [loading,setLoading]=useState(true);
-  const [tab,setTab]=useState<'sightings'|'import'|'history'>('sightings');
+  const [tab,setTab]=useState<'sightings'|'map'|'import'|'history'>('sightings');
   const [rows,setRows]=useState<Sighting[]>([]);
   const [selected,setSelected]=useState<Sighting|null>(null);
   const [search,setSearch]=useState('');
@@ -207,7 +208,7 @@ export default function AdminDashboard(){
 
   return <section className="container section admin-shell">
     <div className="admin-top"><div><p className="eyebrow">FFWG SIGHTINGS SYSTEM</p><h1>Admin dashboard</h1><p className="admin-muted">Signed in as {admin.email} · {admin.role}</p></div><button className="button small navy" onClick={logout}>Sign out</button></div>
-    <div className="admin-tabs"><button className={tab==='sightings'?'active':''} onClick={()=>setTab('sightings')}>Sightings</button><button className={tab==='import'?'active':''} onClick={()=>setTab('import')}>Import sightings</button><button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>Import history</button></div>
+    <div className="admin-tabs"><button className={tab==='sightings'?'active':''} onClick={()=>setTab('sightings')}>Sightings</button><button className={tab==='map'?'active':''} onClick={()=>setTab('map')}>Interactive map</button><button className={tab==='import'?'active':''} onClick={()=>setTab('import')}>Import sightings</button><button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>Import history</button></div>
     {notice&&<div className="admin-notice">{notice}</div>}
 
     {tab==='sightings'&&<>
@@ -218,6 +219,8 @@ export default function AdminDashboard(){
         <aside className="admin-detail">{selected?<><div className="admin-detail-head"><div><p className="eyebrow">SIGHTING</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2></div></div><dl><dt>Date / time</dt><dd>{fmtDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}{selected.latitude!==null&&selected.longitude!==null?<><br/><small>{selected.latitude}, {selected.longitude}</small></>:null}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Observer</dt><dd>{selected.observer_name}{selected.observer_email?<><br/><small>{selected.observer_email}</small></>:null}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Notes</dt><dd>{selected.notes||'—'}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}{selected.legacy_id?' · '+selected.legacy_id:''}</dd></dl>{selected.sighting_photos?.length>0&&<div className="admin-photos"><h3>Photos</h3>{selected.sighting_photos.map(p=><button key={p.id} onClick={()=>openPhoto(p)}>{p.original_filename} <span>View ↗</span></button>)}</div>}<label>Status<select value={selected.status} onChange={e=>setSelected({...selected,status:e.target.value})}>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={5} value={selected.internal_notes||''} onChange={e=>setSelected({...selected,internal_notes:e.target.value})}/></label><div className="admin-record-actions"><button className="button navy" onClick={saveSelected} disabled={busy}>Save review</button>{admin.role!=='reviewer'&&<button className="admin-danger-button" onClick={deleteSelected} disabled={busy}>Delete sighting</button>}</div></>:<div className="admin-empty">Select a sighting to review its details.</div>}</aside>
       </div>
     </>}
+
+    {tab==='map'&&<AdminSightingsMap sightings={rows} onOpenRecord={s=>{setSelected({...s} as Sighting);setTab('sightings');}}/>}
 
     {tab==='import'&&<div className="admin-import">
       <div className="admin-card"><p className="eyebrow">BULK IMPORT</p><h2>Import historical sightings</h2><p>Upload a CSV or Excel file. Nothing is written until validation is complete and you confirm the import.</p><label className="upload-field">Choose CSV or Excel<input type="file" accept=".csv,.xlsx,.xls" onChange={e=>e.target.files?.[0]&&loadFile(e.target.files[0])}/></label>{fileName&&<p><strong>{fileName}</strong> · {sheetRows.length} data rows loaded</p>}</div>
