@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {MAX_BYTES,validateSubmission,imageSignatureMatches} from '@/lib/submission.mjs';
 export const runtime='nodejs';
 const reply=(body:object,status:number)=>NextResponse.json(body,{status,headers:{'Cache-Control':'no-store'}});
-const supa=(path:string,init:RequestInit={})=>fetch(`${process.env.SUPABASE_URL}/${path}`,{...init,headers:{apikey:process.env.SUPABASE_SECRET_KEY!,...(init.headers||{})}});
+const supa=(path:string,init:RequestInit={})=>fetch(`${process.env.SUPABASE_URL}/${path}`,{...init,headers:{apikey:process.env.SUPABASE_SECRET_KEY!,Authorization:`Bearer ${process.env.SUPABASE_SECRET_KEY}`,...(init.headers||{})}});
 function coordinates(value:string){const m=value.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);if(!m)return [null,null];const lat=Number(m[1]),lng=Number(m[2]);return lat>=-90&&lat<=90&&lng>=-180&&lng<=180?[lat,lng]:[null,null];}
 export async function POST(request:NextRequest){
  const origin=request.headers.get('origin');if(!origin||new URL(origin).host!==new URL(request.url).host)return reply({error:'Submission origin could not be verified.'},403);
