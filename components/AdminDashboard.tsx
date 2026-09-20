@@ -11,6 +11,7 @@ const SUPABASE_URL='https://umvxpiswwxsvfotuylin.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_CIn4aVJKOl4GZ1_kcxe2eg_1o1WHBjf';
 const ACCESS_KEY='ffwg_admin_access';
 const REFRESH_KEY='ffwg_admin_refresh';
+const EDITOR_ENDPOINT=SUPABASE_URL+'/functions/v1/admin-sighting-editor';
 
 type AdminInfo={email:string;role:'owner'|'admin'|'reviewer'};
 type Photo={id:string;storage_path:string;original_filename:string;mime_type:string;size_bytes:number};
@@ -93,6 +94,7 @@ export default function AdminDashboard(){
   const [inquiries,setInquiries]=useState<ContactInquiry[]>([]);
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState(false);
+  const [photoFiles,setPhotoFiles]=useState<File[]>([]);
 
   const [fileName,setFileName]=useState('');
   const [headers,setHeaders]=useState<string[]>([]);
@@ -119,6 +121,20 @@ export default function AdminDashboard(){
     let res=await fetch('/api/admin',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});
     if(res.status===401&&retry){token=await refreshSession();if(token)return api(action,payload,false);}
     const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed.');return data;
+  }
+  async function editorApi(action:string,payload:any={},retry=true){
+    let token=localStorage.getItem(ACCESS_KEY);if(!token)throw new Error('Sign in required.');
+    let res=await fetch(EDITOR_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});
+    if(res.status===401&&retry){token=await refreshSession();if(token)return editorApi(action,payload,false);}
+    const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed.');return data;
+  }
+  async function uploadSelectedPhotos(retry=true){
+    if(!selected||photoFiles.length===0)return;
+    let token=localStorage.getItem(ACCESS_KEY);if(!token)throw new Error('Sign in required.');
+    const form=new FormData();form.set('action','addPhotos');form.set('id',selected.id);photoFiles.forEach(file=>form.append('photos',file));
+    const res=await fetch(EDITOR_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
+    if(res.status===401&&retry){token=await refreshSession();if(token)return uploadSelectedPhotos(false);}
+    const data=await res.json();if(!res.ok)throw new Error(data.error||'Photo upload failed.');
   }
   async function checkSession(){
     setLoading(true);
@@ -169,12 +185,22 @@ export default function AdminDashboard(){
   }
   async function saveSelected(){
     if(!selected)return;setBusy(true);setNotice('');
-    try{await api('updateSighting',{id:selected.id,status:selected.status,internal_notes:selected.internal_notes||''});setNotice('Sighting updated.');await loadSightings();}
+    try{
+      await editorApi('updateSighting',{id:selected.id,sighting_date:selected.sighting_date,sighting_time:selected.sighting_time||'',location_description:selected.location_description,latitude:selected.latitude,longitude:selected.longitude,flamingo_count:selected.flamingo_count,bands_or_tags:selected.bands_or_tags||'',behavior:selected.behavior||'',notes:selected.notes||'',status:selected.status,internal_notes:selected.internal_notes||''});
+      await uploadSelectedPhotos();setPhotoFiles([]);setNotice('Sighting updated.');await loadSightings();
+    }
     catch(e){setNotice(e instanceof Error?e.message:'Update failed.');}
     finally{setBusy(false);}
   }
   async function openPhoto(p:Photo){
     try{const d=await api('photoUrl',{path:p.storage_path});window.open(d.url,'_blank','noopener,noreferrer');}catch(e){setNotice(e instanceof Error?e.message:'Unable to open photo.');}
+  }
+  async function removePhoto(p:Photo){
+    if(!selected||admin?.role==='reviewer'||!confirm('Remove '+p.original_filename+' from this sighting? This cannot be undone.'))return;
+    setBusy(true);setNotice('');
+    try{await editorApi('deletePhoto',{id:selected.id,photo_id:p.id});setNotice('Photo removed.');await loadSightings();}
+    catch(e){setNotice(e instanceof Error?e.message:'Unable to remove photo.');}
+    finally{setBusy(false);}
   }
   async function deleteSelected(){
     if(!selected||admin?.role==='reviewer')return;
@@ -239,8 +265,8 @@ export default function AdminDashboard(){
       <div className="admin-stats"><div><strong>{stats.total}</strong><span>Loaded sightings</span></div><div><strong>{stats.newCount}</strong><span>New</span></div><div><strong>{stats.verified}</strong><span>Verified</span></div><div><strong>{stats.photos}</strong><span>Photos</span></div></div>
       <div className="admin-toolbar"><input placeholder="Search name, location, notes" value={search} onChange={e=>setSearch(e.target.value)}/><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select><select value={source} onChange={e=>setSource(e.target.value)}><option value="">All sources</option><option value="website">Website</option><option value="spreadsheet_import">Spreadsheet</option><option value="manual_admin">Manual</option></select><button className="button small navy" onClick={()=>loadSightings()} disabled={busy}>Apply</button><button className="button small" onClick={exportCsv} disabled={busy}>Export CSV</button></div>
       <div className="admin-grid">
-        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Location</th><th>Birds</th><th>Source</th><th>Status</th><th>Photos</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} className={selected?.id===r.id?'selected':''} onClick={()=>setSelected({...r})}><td>{fmtDate(r.sighting_date)}</td><td>{r.location_description}</td><td>{r.flamingo_count}</td><td>{sourceLabel(r.source)}</td><td><span className={'status-pill '+r.status}>{statusLabel(r.status)}</span></td><td>{r.sighting_photos?.length||0}</td></tr>)}</tbody></table></div>
-        <aside className="admin-detail">{selected?<><div className="admin-detail-head"><div><p className="eyebrow">SIGHTING</p><h2>{selected.reference_no?'FFWG-'+new Date().getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2></div></div><dl><dt>Date / time</dt><dd>{fmtDate(selected.sighting_date)} {selected.sighting_time||''}</dd><dt>Location</dt><dd>{selected.location_description}{selected.latitude!==null&&selected.longitude!==null?<><br/><small>{selected.latitude}, {selected.longitude}</small></>:null}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd><dt>Observer</dt><dd>{selected.observer_name}{selected.observer_email?<><br/><small>{selected.observer_email}</small></>:null}</dd><dt>Bands / tags</dt><dd>{selected.bands_or_tags||'—'}</dd><dt>Behavior</dt><dd>{selected.behavior||'—'}</dd><dt>Notes</dt><dd>{selected.notes||'—'}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}{selected.legacy_id?' · '+selected.legacy_id:''}</dd></dl>{selected.sighting_photos?.length>0&&<div className="admin-photos"><h3>Photos</h3>{selected.sighting_photos.map(p=><button key={p.id} onClick={()=>openPhoto(p)}>{p.original_filename} <span>View ↗</span></button>)}</div>}<label>Status<select value={selected.status} onChange={e=>setSelected({...selected,status:e.target.value})}>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={5} value={selected.internal_notes||''} onChange={e=>setSelected({...selected,internal_notes:e.target.value})}/></label><div className="admin-record-actions"><button className="button navy" onClick={saveSelected} disabled={busy}>Save review</button>{admin.role!=='reviewer'&&<button className="admin-danger-button" onClick={deleteSelected} disabled={busy}>Delete sighting</button>}</div></>:<div className="admin-empty">Select a sighting to review its details.</div>}</aside>
+        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Location</th><th>Birds</th><th>Source</th><th>Status</th><th>Photos</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} className={selected?.id===r.id?'selected':''} onClick={()=>{setSelected({...r});setPhotoFiles([]);}}><td>{fmtDate(r.sighting_date)}</td><td>{r.location_description}</td><td>{r.flamingo_count}</td><td>{sourceLabel(r.source)}</td><td><span className={'status-pill '+r.status}>{statusLabel(r.status)}</span></td><td>{r.sighting_photos?.length||0}</td></tr>)}</tbody></table></div>
+        <aside className="admin-detail">{selected?<><div className="admin-detail-head"><div><p className="eyebrow">SIGHTING</p><h2>{selected.reference_no?'FFWG-'+new Date(selected.submitted_at).getFullYear()+'-'+String(selected.reference_no).padStart(5,'0'):'Imported record'}</h2></div></div><div className="admin-edit-grid"><label>Date<input type="date" value={selected.sighting_date} disabled={admin.role==='reviewer'} onChange={e=>setSelected({...selected,sighting_date:e.target.value})}/></label><label>Local time<input type="time" value={(selected.sighting_time||'').slice(0,5)} disabled={admin.role==='reviewer'} onChange={e=>setSelected({...selected,sighting_time:e.target.value||null})}/></label><label className="full">Location<input value={selected.location_description} disabled={admin.role==='reviewer'} maxLength={500} onChange={e=>setSelected({...selected,location_description:e.target.value})}/></label><label>Latitude<input type="number" step="any" value={selected.latitude??''} disabled={admin.role==='reviewer'} onChange={e=>setSelected({...selected,latitude:e.target.value===''?null:Number(e.target.value)})}/></label><label>Longitude<input type="number" step="any" value={selected.longitude??''} disabled={admin.role==='reviewer'} onChange={e=>setSelected({...selected,longitude:e.target.value===''?null:Number(e.target.value)})}/></label><p className="field-help full">Exact coordinates stay private and are only visible to authorized dashboard members.</p><label>Flamingos<input type="number" min="1" max="10000" value={selected.flamingo_count} disabled={admin.role==='reviewer'} onChange={e=>setSelected({...selected,flamingo_count:Number(e.target.value)})}/></label><label>Bands / tags<input value={selected.bands_or_tags||''} disabled={admin.role==='reviewer'} maxLength={5000} onChange={e=>setSelected({...selected,bands_or_tags:e.target.value})}/></label><label className="full">Behavior<textarea rows={3} value={selected.behavior||''} disabled={admin.role==='reviewer'} maxLength={5000} onChange={e=>setSelected({...selected,behavior:e.target.value})}/></label><label className="full">Notes<textarea rows={4} value={selected.notes||''} disabled={admin.role==='reviewer'} maxLength={5000} onChange={e=>setSelected({...selected,notes:e.target.value})}/></label></div><dl><dt>Observer</dt><dd>{selected.observer_name}{selected.observer_email?<><br/><small>{selected.observer_email}</small></>:null}</dd><dt>Source</dt><dd>{sourceLabel(selected.source)}{selected.legacy_id?' · '+selected.legacy_id:''}</dd></dl><div className="admin-photos"><h3>Photos ({selected.sighting_photos?.length||0}/3)</h3>{selected.sighting_photos?.map(p=><div className="admin-photo-row" key={p.id}><button onClick={()=>openPhoto(p)}>{p.original_filename} <span>View ↗</span></button>{admin.role!=='reviewer'&&<button className="admin-photo-remove" onClick={()=>removePhoto(p)} aria-label={'Remove '+p.original_filename}>Remove</button>}</div>)}{admin.role!=='reviewer'&&(selected.sighting_photos?.length||0)<3&&<label className="upload-field">Add photos<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onChange={e=>setPhotoFiles(Array.from(e.target.files||[]).slice(0,3-(selected.sighting_photos?.length||0)))}/><small>{photoFiles.length?photoFiles.map(f=>f.name).join(', '):'Up to '+(3-(selected.sighting_photos?.length||0))+' more; 20 MB each.'}</small></label>}</div><label>Status<select value={selected.status} onChange={e=>setSelected({...selected,status:e.target.value})}>{['new','reviewing','verified','unverified','duplicate','archived'].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label><label>Internal notes<textarea rows={5} value={selected.internal_notes||''} onChange={e=>setSelected({...selected,internal_notes:e.target.value})}/></label><div className="admin-record-actions"><button className="button navy" onClick={saveSelected} disabled={busy}>{busy?'Saving…':'Save changes'}</button>{admin.role!=='reviewer'&&<button className="admin-danger-button" onClick={deleteSelected} disabled={busy}>Delete sighting</button>}</div></>:<div className="admin-empty">Select a sighting to review its details.</div>}</aside>
       </div>
     </>}
 
