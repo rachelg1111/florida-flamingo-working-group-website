@@ -9,6 +9,7 @@ type PublicSighting={
   flamingo_count:number;
   latitude:number;
   longitude:number;
+  photos:string[];
 };
 
 const endpoint='https://umvxpiswwxsvfotuylin.supabase.co/functions/v1/public-sightings-map';
@@ -68,7 +69,7 @@ export default function PublicSightingsMap(){
     {error&&<div className="form-error">{error}</div>}
     <div className="public-map-layout">
       <div ref={container} className="public-map-canvas" aria-label="Map of approximate verified flamingo sighting locations">{!ready&&!error&&<span>Loading map…</span>}</div>
-      <aside className="public-map-card">{selected?<><p className="eyebrow">SIGHTING</p><h2>Approximate location</h2><dl><dt>Date</dt><dd>{formatDate(selected.sighting_date)}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd></dl></>:<div className="admin-empty">Select a pin to see the sighting summary.</div>}</aside>
+      <aside className="public-map-card">{selected?<><p className="eyebrow">SIGHTING</p><h2>Approximate location</h2>{selected.photos.length>0&&<div className="public-map-photos">{selected.photos.map((url,index)=><a href={url} target="_blank" rel="noopener noreferrer" key={url} aria-label={'Open sighting photo '+(index+1)}><img src={url} alt={'Submitted flamingo sighting photograph '+(index+1)}/></a>)}</div>}<dl><dt>Date</dt><dd>{formatDate(selected.sighting_date)}</dd><dt>Flamingos</dt><dd>{selected.flamingo_count}</dd></dl></>:<div className="admin-empty">Select a pin to see the sighting summary.</div>}</aside>
     </div>
     <p className="public-map-note">Approximate location</p>
   </div>;
