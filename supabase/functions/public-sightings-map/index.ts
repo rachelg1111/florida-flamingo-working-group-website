@@ -22,20 +22,35 @@ Deno.serve(async(req:Request)=>{
     const supabase=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await supabase
       .from("sightings")
-      .select("id,sighting_date,flamingo_count,latitude,longitude")
+      .select("id,sighting_date,flamingo_count,latitude,longitude,consent_photo_use,sighting_photos(storage_path)")
       .eq("status","verified")
       .not("latitude","is",null)
       .not("longitude","is",null)
       .order("sighting_date",{ascending:false})
       .limit(1000);
     if(error)throw error;
+    const photoPaths=(data||[])
+      .filter(row=>row.consent_photo_use)
+      .flatMap(row=>(row.sighting_photos||[]).map((photo:{storage_path:string})=>photo.storage_path))
+      .filter(Boolean);
+    const signedByPath=new Map<string,string>();
+    if(photoPaths.length){
+      const {data:signed,error:signedError}=await supabase.storage.from("sighting-photos").createSignedUrls(photoPaths,3600);
+      if(signedError)throw signedError;
+      (signed||[]).forEach((item:{path?:string;signedUrl?:string})=>{
+        if(item.path&&item.signedUrl)signedByPath.set(item.path,item.signedUrl);
+      });
+    }
     const sightings=await Promise.all((data||[]).map(async(row)=>{
       const approximate=await shiftedCoordinate(row.id,Number(row.latitude),Number(row.longitude),serviceKey);
       return {
         sighting_date:row.sighting_date,
         flamingo_count:row.flamingo_count,
         latitude:approximate.latitude,
-        longitude:approximate.longitude
+        longitude:approximate.longitude,
+        photos:row.consent_photo_use
+          ?(row.sighting_photos||[]).map((photo:{storage_path:string})=>signedByPath.get(photo.storage_path)).filter(Boolean)
+          :[]
       };
     }));
     return reply({sightings});
