@@ -189,7 +189,7 @@ export default function AdminDashboard(){
     const statusToSave=statusSelectRef.current?.value||selected.status;
     setBusy(true);setNotice('');
     try{
-      await editorApi('updateSighting',{id:selected.id,sighting_date:selected.sighting_date,sighting_time:selected.sighting_time||'',location_description:selected.location_description,latitude:selected.latitude,longitude:selected.longitude,flamingo_count:selected.flamingo_count,bands_or_tags:selected.bands_or_tags||'',behavior:selected.behavior||'',notes:selected.notes||'',status:statusToSave,internal_notes:selected.internal_notes||''});
+      await editorApi('updateSighting',{id:selected.id,sighting_date:selected.sighting_date,sighting_time:(selected.sighting_time||'').slice(0,5),location_description:selected.location_description,latitude:selected.latitude,longitude:selected.longitude,flamingo_count:selected.flamingo_count,bands_or_tags:selected.bands_or_tags||'',behavior:selected.behavior||'',notes:selected.notes||'',status:statusToSave,internal_notes:selected.internal_notes||''});
       await uploadSelectedPhotos();setPhotoFiles([]);setNotice('Sighting updated — status: '+statusLabel(statusToSave)+'.');await loadSightings();
     }
     catch(e){setNotice(e instanceof Error?e.message:'Update failed.');}
