@@ -92,12 +92,28 @@ export default {
       const id = clean(value("id"));
       if (!id) return json({ error: "Missing sighting id." }, 400);
 
-      if (action === "updateSighting") {
+      if (action === "updateStatus") {
         const status = clean(value("status"));
-        const internal_notes = nullableText(value("internal_notes"), 10000);
         if (!allowedStatuses.includes(status)) return json({ error: "Choose a valid status." }, 400);
 
-        const update: Record<string, unknown> = { status, internal_notes };
+        const { data, error } = await ctx.supabaseAdmin
+          .from("sightings")
+          .update({ status })
+          .eq("id", id)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json({ error: "Sighting not found." }, 404);
+        await audit(ctx, admin.email, "update_sighting_status", id, {
+          fields: ["status"],
+          status,
+        });
+        return json({ ok: true, status });
+      }
+
+      if (action === "updateSighting") {
+        const internal_notes = nullableText(value("internal_notes"), 10000);
+        const update: Record<string, unknown> = { internal_notes };
         if (admin.role !== "reviewer") {
           const sighting_date = validDate(value("sighting_date"));
           const sighting_time = validTime(value("sighting_time"));
@@ -144,7 +160,6 @@ export default {
         if (!data) return json({ error: "Sighting not found." }, 404);
         await audit(ctx, admin.email, "update_sighting", id, {
           fields: Object.keys(update),
-          status,
         });
         return json({ ok: true });
       }
