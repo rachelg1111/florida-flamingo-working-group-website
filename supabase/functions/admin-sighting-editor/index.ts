@@ -26,7 +26,9 @@ function validDate(value: unknown) {
 function validTime(value: unknown) {
   const time = clean(value);
   if (!time) return null;
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : undefined;
+  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return time;
+  if (/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time)) return time.slice(0, 5);
+  return undefined;
 }
 
 function numeric(value: unknown) {
