@@ -49,8 +49,15 @@ Deno.serve(async(req:Request)=>{
         .replace(/\\s+in\\s+(Everglades National Park).*$/i,", $1")
         .trim();
       const placeBeforeIn=query.match(/(?:north|south|east|west|northeast|northwest|southeast|southwest)\\s+of\\s+(.+?)\\s+in\\s+/i)?.[1]?.trim();
-      const queries=[query,query+", Florida, USA",simplified,simplified+", Florida, USA",placeBeforeIn?placeBeforeIn+", Everglades National Park, Florida, USA":""]
-        .filter((q,index,list)=>q&&list.indexOf(q)===index);
+      const queries=[
+        query,
+        query+", Florida, USA",
+        simplified,
+        simplified+", Florida, USA",
+        placeBeforeIn?placeBeforeIn+", Everglades National Park, Florida, USA":"",
+        placeBeforeIn?placeBeforeIn+", Florida, USA":"",
+        placeBeforeIn||""
+      ].filter((q,index,list)=>q&&list.indexOf(q)===index);
       for(const q of queries){
         const endpoint="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q="+encodeURIComponent(q);
         const res=await fetch(endpoint,{headers:{"User-Agent":"Florida Flamingo Working Group sightings map (floridaflamingowg.org)","Accept":"application/json"}});
