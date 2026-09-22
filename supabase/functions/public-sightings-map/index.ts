@@ -22,13 +22,12 @@ Deno.serve(async(req:Request)=>{
     const supabase=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await supabase
       .from("sightings")
-      .select("id,sighting_date,flamingo_count,latitude,longitude,consent_photo_use,sighting_photos(storage_path)")
+      .select("id,sighting_date,location_description,flamingo_count,latitude,longitude,consent_photo_use,sighting_photos(storage_path)")
       .eq("status","verified")
-      .not("latitude","is",null)
-      .not("longitude","is",null)
       .order("sighting_date",{ascending:false})
       .limit(1000);
     if(error)throw error;
+
     const photoPaths=(data||[])
       .filter(row=>row.consent_photo_use)
       .flatMap(row=>(row.sighting_photos||[]).map((photo:{storage_path:string})=>photo.storage_path))
@@ -41,8 +40,30 @@ Deno.serve(async(req:Request)=>{
         if(item.path&&item.signedUrl)signedByPath.set(item.path,item.signedUrl);
       });
     }
-    const sightings=await Promise.all((data||[]).map(async(row)=>{
-      const approximate=await shiftedCoordinate(row.id,Number(row.latitude),Number(row.longitude),serviceKey);
+
+    async function geocodeLocation(description:string){
+      const query=description.trim();
+      if(!query)return null;
+      for(const q of [query,query+", Florida, USA"]){
+        const endpoint="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q="+encodeURIComponent(q);
+        const res=await fetch(endpoint,{headers:{"User-Agent":"Florida Flamingo Working Group sightings map (floridaflamingowg.org)","Accept":"application/json"}});
+        if(!res.ok)continue;
+        const matches=await res.json();
+        if(Array.isArray(matches)&&matches[0]){
+          const latitude=Number(matches[0].lat),longitude=Number(matches[0].lon);
+          if(Number.isFinite(latitude)&&Number.isFinite(longitude))return {latitude,longitude};
+        }
+      }
+      return null;
+    }
+
+    const sightings=(await Promise.all((data||[]).map(async(row)=>{
+      const hasExact=row.latitude!==null&&row.longitude!==null&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude));
+      const base=hasExact
+        ?{latitude:Number(row.latitude),longitude:Number(row.longitude)}
+        :await geocodeLocation(row.location_description||"");
+      if(!base)return null;
+      const approximate=await shiftedCoordinate(row.id,base.latitude,base.longitude,serviceKey);
       return {
         sighting_date:row.sighting_date,
         flamingo_count:row.flamingo_count,
@@ -50,9 +71,10 @@ Deno.serve(async(req:Request)=>{
         longitude:approximate.longitude,
         photos:row.consent_photo_use
           ?(row.sighting_photos||[]).map((photo:{storage_path:string})=>signedByPath.get(photo.storage_path)).filter(Boolean)
-          :[]
+          :[],
+        location_source:hasExact?"submitted_coordinates":"location_description"
       };
-    }));
+    }))).filter(Boolean);
     return reply({sightings});
   }catch(error){
     console.error("public sightings map error",error);
