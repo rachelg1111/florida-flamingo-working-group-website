@@ -8,7 +8,7 @@ const corsHeaders={
 };
 const reply=(body:object,status=200)=>Response.json(body,{status,headers:{
   ...corsHeaders,
-  "Cache-Control":"public, max-age=300, s-maxage=300",
+  "Cache-Control":"no-store",
   "X-Content-Type-Options":"nosniff"
 }});
 
