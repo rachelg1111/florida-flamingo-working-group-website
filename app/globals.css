@@ -45,6 +45,10 @@ main,.container,.header-inner,.public-map,.public-map-layout,.admin-map-layout,.
 @media(max-width:980px){.admin-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:640px){
   .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* The research grid's intrinsic text width previously widened the whole homepage. */
+  .research-home{grid-template-columns:minmax(0,1fr)}
+  .research-home>*,.research-row>*{min-width:0}
   .research-row{grid-template-columns:46px minmax(0,1fr) 20px}
+  .research-row h3,.research-row p{overflow-wrap:anywhere}
   .facts>div,.facts>div:first-child{grid-template-columns:minmax(0,135px) minmax(0,1fr)}
 }
