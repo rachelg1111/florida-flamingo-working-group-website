@@ -21,7 +21,7 @@ const copy:Record<string,[string,string,string]>={
 'contact-us':['LET’S CONNECT','Contact the working group','We welcome research collaborations, media inquiries, education opportunities, and questions about our work.'],
 'privacy':['YOUR INFORMATION','Privacy & responsible reporting','A clear explanation of how information is handled on this website.']};
 export function generateStaticParams(){return paths.filter(Boolean).map(slug=>({slug}));}
-export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const {slug}=await params;const c=copy[slug];return c?{title:c[1],description:c[2],alternates:{canonical:`/${slug}/`},openGraph:{title:c[1],description:c[2],url:`/${slug}/`}}:{};}
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const {slug}=await params;const c=copy[slug];return c?{title:c[1],description:c[2],alternates:{canonical:`/${slug}`},openGraph:{title:c[1],description:c[2],url:`/${slug}`}}:{};}
 function Prose({children}:{children:string}){return <div className="prose"><Markdown components={{h2:({children})=><h2 id={String(children).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}>{children}</h2>}}>{children}</Markdown></div>}
 const get=(slug:string)=>(pages as Record<string,{body:string}>)[slug].body;
 export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params;if(!copy[slug])notFound();const [eyebrow,title,description]=copy[slug];let content;
